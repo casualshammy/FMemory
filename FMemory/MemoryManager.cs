@@ -32,7 +32,7 @@ namespace FMemory
         ///     Initializes a new instance of the <see cref="MemoryManager" /> class.
         /// </summary>
         /// <param name="proc">The proc.</param>
-        internal MemoryManager(Process proc)
+        public MemoryManager(Process proc)
         {
             if (proc.HasExited)
             {
