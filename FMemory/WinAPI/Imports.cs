@@ -199,7 +199,12 @@ namespace FMemory.WinAPI
         ///     terminated, all resources are automatically cleaned up.
         ///     Created 2012-02-15.
         /// </remarks>
-        [DllImport("kernel32", EntryPoint = "VirtualFreeEx")]
+        [DllImport("kernel32", EntryPoint = nameof(VirtualFreeEx))]
         internal static extern bool VirtualFreeEx(SafeMemoryHandle hProcess, IntPtr dwAddress, int nSize, MemoryFreeType dwFreeType);
+
+        [DllImport("psapi", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool QueryWorkingSetEx(SafeMemoryHandle hProcess, [In, Out] _PSAPI_WORKING_SET_EX_INFORMATION[] pv, int cb);
+
     }
 }

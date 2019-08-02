@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helpers\UnableToReadMemoryException.cs" />
     <Compile Include="MarshalCache.cs" />
     <Compile Include="MemoryManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -54,6 +55,8 @@
     <Compile Include="WinAPI\MemoryProtectionType.cs" />
     <Compile Include="WinAPI\PageProtection.cs" />
     <Compile Include="WinAPI\ProcessAccessFlags.cs" />
+    <Compile Include="WinAPI\_PSAPI_WORKING_SET_EX_BLOCK.cs" />
+    <Compile Include="WinAPI\_PSAPI_WORKING_SET_EX_INFORMATION.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

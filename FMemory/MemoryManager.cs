@@ -1,4 +1,5 @@
-﻿using FMemory.WinAPI;
+﻿using FMemory.Helpers;
+using FMemory.WinAPI;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -27,7 +28,13 @@ namespace FMemory
         ///     Gets the image base.
         /// </summary>
         public readonly IntPtr ImageBase;
-        
+
+        /// <summary>
+        /// If <paramref name="enable"/> set to true, every <see cref="ReadBytes"/> and <see cref="Read"/> will check if physical pages are backing allocation of memory
+        /// </summary>
+        /// <param name="enable"></param>
+        public bool AvoidNotPhysicallyBackedTrapPages { get; set; }
+
         /// <summary>
         ///     Initializes a new instance of the <see cref="MemoryManager" /> class.
         /// </summary>
@@ -63,8 +70,10 @@ namespace FMemory
                 // to remove this check.
                 if (address == IntPtr.Zero)
                 {
-                    throw new ArgumentException("Address cannot be zero.", "address");
+                    throw new ArgumentException("Address cannot be zero.", nameof(address));
                 }
+                if (AvoidNotPhysicallyBackedTrapPages)
+                    ThrowIfMemoryIsNotPhysicallyBacked(address, count);
                 byte[] buffer = new byte[count];
                 fixed (byte* buf = buffer)
                 {
@@ -299,6 +308,27 @@ namespace FMemory
                 Trace.WriteLine(ex);
             }
         }
-        
+
+        public void ThrowIfMemoryIsNotPhysicallyBacked(IntPtr address, int count)
+        {
+            var pageSize = (uint)Environment.SystemPageSize;
+            var startPage = (int)Math.Floor((double)address.ToInt64() / pageSize);
+            var numPages = (int)Math.Ceiling((float)count / pageSize);
+            var startPtr = pageSize * startPage;
+            var wsInfo = new _PSAPI_WORKING_SET_EX_INFORMATION[numPages];
+            for (uint i = 0; i < numPages; i++)
+            {
+                wsInfo[i] = new _PSAPI_WORKING_SET_EX_INFORMATION
+                {
+                    VirtualAddress = new IntPtr(startPtr + i * pageSize)
+                };
+            }
+            if (!Imports.QueryWorkingSetEx(ProcessHandle, wsInfo, numPages * sizeof(_PSAPI_WORKING_SET_EX_INFORMATION)))
+                throw new UnableToReadMemoryException(address, "You cannot read this address because QueryWorkingSetEx returned with error");
+            foreach (var info in wsInfo)
+                if (info.VirtualAttributes.Valid != 1)
+                    throw new UnableToReadMemoryException(address, "You cannot read this address because related memory page is not backed by physical memory");
+        }
+
     }
 }
