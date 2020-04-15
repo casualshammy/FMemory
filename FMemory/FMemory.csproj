@@ -43,6 +43,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Helpers\DetailedArgumentException.cs" />
     <Compile Include="Helpers\UnableToReadMemoryException.cs" />
     <Compile Include="MarshalCache.cs" />
     <Compile Include="MemoryManager.cs" />

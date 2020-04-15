@@ -1,11 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace FMemory.Helpers
 {
+    /// <summary>
+    ///     Class for specific memory read exceptions (when we need to store address information)
+    /// </summary>
     public class UnableToReadMemoryException : Exception
     {
         public UnableToReadMemoryException(IntPtr address, string msg) : base(msg)

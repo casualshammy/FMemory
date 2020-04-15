@@ -8,15 +8,14 @@ using System.Runtime.InteropServices;
 
 namespace FMemory
 {
+    /// <summary>
+    ///     Main class for memory interactions
+    /// </summary>
     public sealed unsafe class MemoryManager : IDisposable
     {
         /// <summary>
-        ///     Gets or sets the process handle.
+        ///     Gets or sets the process handle
         /// </summary>
-        /// <value>
-        ///     The process handle.
-        /// </value>
-        /// <remarks>Created 2012-02-15</remarks>
         public SafeMemoryHandle ProcessHandle;
 
         /// <summary>
@@ -25,20 +24,19 @@ namespace FMemory
         public Process Process { get; private set; }
 
         /// <summary>
-        ///     Gets the image base.
+        ///     Gets the address of image base.
         /// </summary>
         public readonly IntPtr ImageBase;
 
         /// <summary>
-        /// If <paramref name="enable"/> set to true, every <see cref="ReadBytes"/> and <see cref="Read"/> will check if physical pages are backing allocation of memory
+        ///     If set to true, every <see cref="ReadBytes"/> and <see cref="Read"/> will check if physical pages are backing allocation of memory
         /// </summary>
-        /// <param name="enable"></param>
         public bool AvoidNotPhysicallyBackedTrapPages { get; set; }
 
         /// <summary>
         ///     Initializes a new instance of the <see cref="MemoryManager" /> class.
         /// </summary>
-        /// <param name="proc">The proc.</param>
+        /// <param name="proc">The process</param>
         public MemoryManager(Process proc)
         {
             if (proc.HasExited)
@@ -57,31 +55,27 @@ namespace FMemory
         }
 
         /// <summary>
-        ///     Reads a specific number of bytes from memory.
+        ///     Reads a specific number of bytes from memory
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <param name="count">The count.</param>
-        /// <returns></returns>
+        /// <param name="address">The address in memory</param>
+        /// <param name="count">The count of bytes to read</param>
+        /// <returns>If method success, returns array of bytes. If not, returns empty array with zero size</returns>
         public byte[] ReadBytes(IntPtr address, int count)
         {
             if (count != 0)
             {
-                // Yes, this *can* be valid. But in 99.9999% of cases, its not. If it ever is, you should be smart enough
-                // to remove this check.
+                // Yes, this address is valid, but... Well, if you really want it, just delete next instruction
                 if (address == IntPtr.Zero)
                 {
-                    throw new ArgumentException("Address cannot be zero.", nameof(address));
+                    StackTrace stackTrace = new StackTrace(1, true);
+                    throw new DetailedArgumentException("Address cannot be zero.", nameof(address), stackTrace.ToString());
                 }
                 if (AvoidNotPhysicallyBackedTrapPages)
                     ThrowIfMemoryIsNotPhysicallyBacked(address, count);
                 byte[] buffer = new byte[count];
                 fixed (byte* buf = buffer)
-                {
                     if (Imports.ReadProcessMemory(ProcessHandle, address, buf, count, out int numRead) && numRead == count)
-                    {
                         return buffer;
-                    }
-                }
                 int lastError = Marshal.GetLastWin32Error();
                 throw new Win32Exception(lastError, $"Could not read bytes from 0x{address.ToString("X")}");
             }
@@ -93,81 +87,70 @@ namespace FMemory
         {
             try
             {
-                // Optimize this more. The boxing/unboxing required tends to slow this down.
-                // It may be worth it to simply use memcpy to avoid it, but I doubt thats going to give any noticeable increase in speed.
                 if (address == IntPtr.Zero)
-                {
                     throw new InvalidOperationException("Cannot retrieve a value at address 0");
-                }
 
-                object ret;
+                object returnValue;
                 switch (MarshalCache<T>.TypeCode)
                 {
                     case TypeCode.Object:
 
                         if (MarshalCache<T>.RealType == typeof(IntPtr))
-                        {
                             return (T)(object)*(IntPtr*)address;
-                        }
-
-                        // If the type doesn't require an explicit Marshal call, then ignore it and memcpy the fuckin thing.
+                        
                         if (!MarshalCache<T>.TypeRequiresMarshal)
                         {
                             T o = default(T);
                             void* ptr = MarshalCache<T>.GetUnsafePtr(ref o);
-
                             Imports.MoveMemory(ptr, (void*)address, MarshalCache<T>.Size);
-
                             return o;
                         }
-
                         // All System.Object's require marshaling!
-                        ret = Marshal.PtrToStructure(address, typeof(T));
-                        break;
-                    case TypeCode.Boolean:
-                        ret = *(byte*)address != 0;
-                        break;
-                    case TypeCode.Char:
-                        ret = *(char*)address;
+                        returnValue = Marshal.PtrToStructure(address, typeof(T));
                         break;
                     case TypeCode.SByte:
-                        ret = *(sbyte*)address;
+                        returnValue = *(sbyte*)address;
                         break;
                     case TypeCode.Byte:
-                        ret = *(byte*)address;
+                        returnValue = *(byte*)address;
                         break;
                     case TypeCode.Int16:
-                        ret = *(short*)address;
+                        returnValue = *(short*)address;
                         break;
                     case TypeCode.UInt16:
-                        ret = *(ushort*)address;
+                        returnValue = *(ushort*)address;
                         break;
                     case TypeCode.Int32:
-                        ret = *(int*)address;
+                        returnValue = *(int*)address;
                         break;
                     case TypeCode.UInt32:
-                        ret = *(uint*)address;
+                        returnValue = *(uint*)address;
                         break;
                     case TypeCode.Int64:
-                        ret = *(long*)address;
+                        returnValue = *(long*)address;
                         break;
                     case TypeCode.UInt64:
-                        ret = *(ulong*)address;
+                        returnValue = *(ulong*)address;
                         break;
                     case TypeCode.Single:
-                        ret = *(float*)address;
+                        returnValue = *(float*)address;
                         break;
                     case TypeCode.Double:
-                        ret = *(double*)address;
+                        returnValue = *(double*)address;
                         break;
                     case TypeCode.Decimal:
-                        // Probably safe to remove this. I'm unaware of anything that actually uses "decimal" that would require memory reading...
-                        ret = *(decimal*)address;
+                        returnValue = *(decimal*)address;
+                        break;
+                    case TypeCode.Boolean:
+                        returnValue = *(byte*)address != 0;
+                        break;
+                    case TypeCode.Char:
+                        returnValue = *(char*)address;
                         break;
                     default:
                         throw new ArgumentOutOfRangeException();
                 }
-                return (T)ret;
+                return (T)returnValue;
             }
             catch (AccessViolationException)
             {
@@ -175,54 +158,61 @@ namespace FMemory
             }
         }
 
-        /// <summary> Reads a value from the specified address in memory. </summary>
-        /// <remarks> Created 3/26/2012. </remarks>
-        /// <typeparam name="T"> Generic type parameter. </typeparam>
-        /// <param name="address"> The address. </param>
-        /// <returns> . </returns>
+        /// <summary>
+        ///     Reads a value from the address in memory
+        /// </summary>
+        /// <param name="address">
+        ///     The address to read
+        /// </param>
         public T Read<T>(IntPtr address) where T : struct
         {
             fixed (byte* b = ReadBytes(address, MarshalCache<T>.Size))
-            {
                 return InternalRead<T>((IntPtr)b);
-            }
-        }
-
-        /// <summary> Writes a value specified to the address in memory. </summary>
-        /// <typeparam name="T"> Generic type parameter. </typeparam>
-        /// <param name="address"> The address. </param>
-        /// <param name="value"> The value. </param>
-        /// <returns> true if it succeeds, false if it fails. </returns>
-        public bool Write<T>(IntPtr address, T value)
-        {
-            byte[] buffer;
-            IntPtr hObj = Marshal.AllocHGlobal(MarshalCache<T>.Size);
-            try
-            {
-                Marshal.StructureToPtr(value, hObj, false);
-                buffer = new byte[MarshalCache<T>.Size];
-                Marshal.Copy(hObj, buffer, 0, MarshalCache<T>.Size);
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(hObj);
-            }
-
-            // Fix the protection flags to EXECUTE_READWRITE to ensure we're not going to cause issues.
-            // make sure we put back the old protection when we're done!
-            // dwSize should be IntPtr or UIntPtr because the underlying type is SIZE_T and varies with the platform.
-            Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, Protection.PAGE_READWRITE, out uint oldProtect);
-            bool ret = Imports.WriteProcessMemory(ProcessHandle, address, buffer, MarshalCache<T>.Size, out int numWritten);
-            Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, oldProtect, out oldProtect);
-
-            return ret;
         }
 
         /// <summary>
-        ///     Writes a set of bytes to memory.
+        ///     Writes a value to the address in memory
         /// </summary>
-        /// <param name="address">The address.</param>
-        /// <param name="bytes">The bytes.</param>
+        /// <param name="address">
+        ///     The address in memory
+        /// </param>
+        /// <param name="value">
+        ///     The value to write
+        /// </param>
+        /// <returns>
+        ///     True if it succeeds, false overwise
+        /// </returns>
+        public bool Write<T>(IntPtr address, T value)
+        {
+            byte[] buffer;
+            IntPtr allocation = Marshal.AllocHGlobal(MarshalCache<T>.Size);
+            try
+            {
+                Marshal.StructureToPtr(value, allocation, false);
+                buffer = new byte[MarshalCache<T>.Size];
+                Marshal.Copy(allocation, buffer, 0, MarshalCache<T>.Size);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(allocation);
+            }
+
+            // Fix the protection flags to EXECUTE_READWRITE!
+            Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, Protection.PAGE_READWRITE, out uint oldProtect);
+            bool returnValue = Imports.WriteProcessMemory(ProcessHandle, address, buffer, MarshalCache<T>.Size, out int numWritten);
+            Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, oldProtect, out oldProtect);
+
+            return returnValue;
+        }
+
+        /// <summary>
+        ///     Writes an array of bytes to memory.
+        /// </summary>
+        /// <param name="address">
+        ///     The address to write to</param>
+        /// <param name="bytes">
+        ///     The byte array to write
+        /// </param>
         /// <returns>
         ///     Number of bytes written.
         /// </returns>
@@ -234,54 +224,66 @@ namespace FMemory
                 Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, oldProtect, out oldProtect);
                 if (!success || numWritten != bytes.Length)
                 {
-                    throw new AccessViolationException(string.Format("Could not write the specified bytes! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
+                    throw new AccessViolationException(string.Format("Could not write! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
                 }
                 return numWritten;
             }
-            throw new AccessViolationException(string.Format("Could not write the specified bytes! VirtualProtectEx is failed! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
+            throw new AccessViolationException(string.Format("Could not write! VirtualProtectEx is failed! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
         }
 
         /// <summary>
-        ///     Allocates memory inside the opened process.
+        ///     Allocates memory inside the process.
         /// </summary>
-        /// <param name="size">Number of bytes to allocate.</param>
-        /// <param name="allocationType">Type of memory allocation.  See <see cref="MemoryAllocationType" />.</param>
-        /// <param name="protect">Type of memory protection.  See <see cref="MemoryProtectionType" /></param>
+        /// <param name="size">
+        ///     Number of bytes to allocate
+        /// </param>
+        /// <param name="allocationType">
+        ///     Type of memory allocation
+        /// </param>
+        /// <param name="protectionType">
+        ///     Type of memory protection
+        /// </param>
         /// <returns>Returns NULL on failure, or the base address of the allocated memory on success.</returns>
-        public IntPtr AllocateMemory(int size, MemoryAllocationType allocationType = MemoryAllocationType.MEM_COMMIT, MemoryProtectionType protect = MemoryProtectionType.PAGE_EXECUTE_READWRITE)
+        public IntPtr AllocateMemory(int size, MemoryAllocationType allocationType = MemoryAllocationType.MEM_COMMIT, MemoryProtectionType protectionType = MemoryProtectionType.PAGE_EXECUTE_READWRITE)
         {
-            return Imports.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, allocationType, protect);
+            return Imports.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, allocationType, protectionType);
         }
 
         /// <summary>
-        ///     Frees an allocated block of memory in the opened process.
+        ///     Frees an allocated block of memory in the process.
         /// </summary>
-        /// <param name="address">Base address of the block of memory to be freed.</param>
-        /// <returns>Returns true on success, false on failure.</returns>
-        /// <remarks>
-        ///     Frees a block of memory using <see cref="MemoryFreeType.MEM_RELEASE" />.
-        /// </remarks>
+        /// <param name="address">
+        ///     Address of the block of memory
+        /// </param>
+        /// <returns>
+        ///     Returns true on success, false overwise
+        /// </returns>
         public bool FreeMemory(IntPtr address)
         {
-            return FreeMemory(address, /*size must be 0 for MEM_RELEASE*/ 0, MemoryFreeType.MEM_RELEASE);
+            // 0 for MEM_RELEASE
+            return FreeMemory(address, 0, MemoryFreeType.MEM_RELEASE);
         }
 
         /// <summary>
-        ///     Frees an allocated block of memory in the opened process.
+        ///     Frees an allocated block of memory in the process.
         /// </summary>
-        /// <param name="address">Base address of the block of memory to be freed.</param>
-        /// <param name="size">
-        ///     Number of bytes to be freed.  This must be zero (0) if using
-        ///     <see cref="MemoryFreeType.MEM_RELEASE" />.
+        /// <param name="address">
+        ///     Address of the block of memory
         /// </param>
-        /// <param name="freeType">Type of free operation to use.  See <see cref="MemoryFreeType" />.</param>
-        /// <returns>Returns true on success, false on failure.</returns>
+        /// <param name="size">
+        ///     Number of bytes to be freed. This must be 0 if using MEM_RELEASE
+        /// </param>
+        /// <param name="freeType">
+        ///     Type of free operation
+        /// </param>
+        /// <returns>
+        ///     Returns true on success, false overwise
+        /// </returns>
         public bool FreeMemory(IntPtr address, int size, MemoryFreeType freeType)
         {
+            // for sure
             if (freeType == MemoryFreeType.MEM_RELEASE)
-            {
                 size = 0;
-            }
             return Imports.VirtualFreeEx(ProcessHandle, address, size, freeType);
         }
 
@@ -309,13 +311,23 @@ namespace FMemory
             }
         }
 
-        public void ThrowIfMemoryIsNotPhysicallyBacked(IntPtr address, int count)
+        /// <summary>
+        ///     Checks if memory is really physically backed
+        ///     It is needed if target process uses some kind of trap pages
+        /// </summary>
+        /// <param name="address">
+        ///     Address of the block of memory to check
+        /// </param>
+        /// <param name="count">
+        ///     Size of block of memory
+        /// </param>
+        private void ThrowIfMemoryIsNotPhysicallyBacked(IntPtr address, int count)
         {
-            var pageSize = (uint)Environment.SystemPageSize;
-            var startPage = (int)Math.Floor((double)address.ToInt64() / pageSize);
-            var numPages = (int)Math.Ceiling((float)count / pageSize);
-            var startPtr = pageSize * startPage;
-            var wsInfo = new _PSAPI_WORKING_SET_EX_INFORMATION[numPages];
+            uint pageSize = (uint)Environment.SystemPageSize;
+            int startPage = (int)Math.Floor((double)address.ToInt64() / pageSize);
+            int numPages = (int)Math.Ceiling((float)count / pageSize);
+            long startPtr = pageSize * startPage;
+            _PSAPI_WORKING_SET_EX_INFORMATION[] wsInfo = new _PSAPI_WORKING_SET_EX_INFORMATION[numPages];
             for (uint i = 0; i < numPages; i++)
             {
                 wsInfo[i] = new _PSAPI_WORKING_SET_EX_INFORMATION
@@ -325,7 +337,7 @@ namespace FMemory
             }
             if (!Imports.QueryWorkingSetEx(ProcessHandle, wsInfo, numPages * sizeof(_PSAPI_WORKING_SET_EX_INFORMATION)))
                 throw new UnableToReadMemoryException(address, "You cannot read this address because QueryWorkingSetEx returned with error");
-            foreach (var info in wsInfo)
+            foreach (_PSAPI_WORKING_SET_EX_INFORMATION info in wsInfo)
                 if (info.VirtualAttributes.Valid != 1)
                     throw new UnableToReadMemoryException(address, "You cannot read this address because related memory page is not backed by physical memory");
         }
