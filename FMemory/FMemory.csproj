@@ -43,12 +43,18 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Helpers\DetailedArgumentException.cs" />
-    <Compile Include="Helpers\UnableToReadMemoryException.cs" />
-    <Compile Include="MarshalCache.cs" />
+    <Compile Include="PatternHelpers\AddModifier.cs" />
+    <Compile Include="ManagerHelpers\DetailedArgumentException.cs" />
+    <Compile Include="PatternHelpers\IModifier.cs" />
+    <Compile Include="PatternHelpers\LeaModifier.cs" />
+    <Compile Include="PatternHelpers\LeaType.cs" />
+    <Compile Include="PatternHelpers\Result.cs" />
+    <Compile Include="ManagerHelpers\UnableToReadMemoryException.cs" />
+    <Compile Include="ManagerHelpers\MarshalCache.cs" />
     <Compile Include="MemoryManager.cs" />
+    <Compile Include="MemoryPattern.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SafeMemoryHandle.cs" />
+    <Compile Include="ManagerHelpers\SafeMemoryHandle.cs" />
     <Compile Include="WinAPI\Imports.cs" />
     <Compile Include="WinAPI\LoadLibraryFlags.cs" />
     <Compile Include="WinAPI\MemoryAllocationType.cs" />
