@@ -15,31 +15,31 @@ namespace FMemory.PatternHelpers
             Type = type;
         }
 
-        public IntPtr Apply(MemoryManager bm, IntPtr address)
+        public IntPtr Apply(MemoryManager memory, IntPtr address)
         {
             switch (Type)
             {
                 case LeaType.Byte:
-                    return (IntPtr)bm.Read<byte>(address);
+                    return (IntPtr)memory.Read<byte>(address);
 
                 case LeaType.Word:
-                    return (IntPtr)bm.Read<ushort>(address);
+                    return (IntPtr)memory.Read<ushort>(address);
 
                 case LeaType.Dword:
-                    return (IntPtr)bm.Read<uint>(address);
+                    return (IntPtr)memory.Read<uint>(address);
 
                 case LeaType.E8:
                     // 4 = <call instruction size> - <E8>
-                    return address + 4 + bm.Read<int>(address); 
+                    return address + 4 + memory.Read<int>(address); 
 
                 case LeaType.SimpleAddress:
                     return address;
 
                 case LeaType.Cmp:
-                    return address + 5 + bm.Read<int>(address);
+                    return address + 5 + memory.Read<int>(address);
                     
                 case LeaType.RelativePlus8:
-                    return address + 8 + bm.Read<int>(address);
+                    return address + 8 + memory.Read<int>(address);
 
                 default:
                     throw new InvalidDataException("Unknown " + nameof(LeaType));
