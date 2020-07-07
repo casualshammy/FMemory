@@ -6,7 +6,7 @@ using System.Reflection.Emit;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
-namespace FMemory
+namespace FMemory.Helpers
 {
     /// <summary>
     ///     We use this class for speed-up marshaling

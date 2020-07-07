@@ -4,7 +4,7 @@ using System.Runtime.ConstrainedExecution;
 using System.Security;
 using System.Security.Permissions;
 
-namespace FMemory
+namespace FMemory.Helpers
 {
     [HostProtection(MayLeakOnAbort = true)]
     [SuppressUnmanagedCodeSecurity]

@@ -6,7 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 
-namespace FMemoryPattern
+namespace FMemory
 {
     /// <summary>
     ///     Main class for finding memory address by pattern
