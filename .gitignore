@@ -1,4 +1,4 @@
-FMemory/obj/
-FMemory/bin/
-.vs/
-/.gitattributes
+/FMemory/obj
+/FMemory/bin/Release/net472
+/.vs/FMemory/v16/*.suo
+/FMemory/bin/Release/*.nupkg

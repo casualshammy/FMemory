@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 15
-VisualStudioVersion = 15.0.27130.2026
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.31410.357
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FMemory", "FMemory\FMemory.csproj", "{A9CBAAC4-F7E5-4D58-A0FA-89615C3B0FBD}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FMemory", "FMemory\FMemory.csproj", "{2BBA1502-A4D3-4BD2-BFFC-9ABC2D89EA66}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{A9CBAAC4-F7E5-4D58-A0FA-89615C3B0FBD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{A9CBAAC4-F7E5-4D58-A0FA-89615C3B0FBD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{A9CBAAC4-F7E5-4D58-A0FA-89615C3B0FBD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{A9CBAAC4-F7E5-4D58-A0FA-89615C3B0FBD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{2BBA1502-A4D3-4BD2-BFFC-9ABC2D89EA66}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{2BBA1502-A4D3-4BD2-BFFC-9ABC2D89EA66}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{2BBA1502-A4D3-4BD2-BFFC-9ABC2D89EA66}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{2BBA1502-A4D3-4BD2-BFFC-9ABC2D89EA66}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {2065B819-8006-4F01-9F6F-629FC38F39F8}
+		SolutionGuid = {50F9C062-00C9-49CE-9967-C0A9419927A0}
 	EndGlobalSection
 EndGlobal

@@ -25,13 +25,13 @@ namespace FMemory
         /// </summary>
         public List<IModifier> Modifiers = new List<IModifier>();
 
-        private byte[] Bytes;
-        private bool[] Mask;
+        private byte[] p_bytes;
+        private bool[] p_mask;
 
         /// <summary>
         ///     How much bytes to read in each memory block
         /// </summary>
-        private const long CacheSize = 0x500;
+        private const long p_cacheSize = 0x500;
 
         private MemoryPattern()
         {
@@ -46,7 +46,7 @@ namespace FMemory
         /// <returns>True if memory block satisfies pattern, false overwise</returns>
         private bool DataCompare(byte[] data, uint dataOffset)
         {
-            return !Mask.Where((t, i) => t && Bytes[i] != data[dataOffset + i]).Any();
+            return !p_mask.Where((t, i) => t && p_bytes[i] != data[dataOffset + i]).Any();
         }
 
         /// <summary>
@@ -59,11 +59,11 @@ namespace FMemory
             System.Diagnostics.ProcessModule mainModule = bm.Process.MainModule;
             IntPtr mainModuleBaseAddress = mainModule.BaseAddress;
             long mainModuleSize = mainModule.ModuleMemorySize;
-            long patternLength = Bytes.LongLength;
+            long patternLength = p_bytes.LongLength;
 
-            for (long offset = 0; offset < mainModuleSize - patternLength; offset += CacheSize - patternLength)
+            for (long offset = 0; offset < mainModuleSize - patternLength; offset += p_cacheSize - patternLength)
             {
-                byte[] cacheBytes = bm.ReadBytes(mainModuleBaseAddress + (int)offset, (int)(CacheSize > mainModuleSize - offset ? mainModuleSize - offset : CacheSize));
+                byte[] cacheBytes = bm.ReadBytes(mainModuleBaseAddress + (int)offset, (int)(p_cacheSize > mainModuleSize - offset ? mainModuleSize - offset : p_cacheSize));
                 for (uint offsetInCacheBytes = 0; offsetInCacheBytes < cacheBytes.Length - patternLength; offsetInCacheBytes++)
                 {
                     if (DataCompare(cacheBytes, offsetInCacheBytes))
@@ -116,8 +116,8 @@ namespace FMemory
                 pattern.Modifiers = modifiers.ToList();
             string[] maskEntries = textPattern.Split(' ');
             int index = 0;
-            pattern.Bytes = new byte[maskEntries.Length];
-            pattern.Mask = new bool[maskEntries.Length];
+            pattern.p_bytes = new byte[maskEntries.Length];
+            pattern.p_mask = new bool[maskEntries.Length];
             uint addModifierIndex = 0;
             bool addModifierInitialised = false;
             foreach (string token in maskEntries)
@@ -126,11 +126,11 @@ namespace FMemory
                     throw new InvalidDataException("Invalid token: " + token);
                 if (token.Contains("x"))
                 {
-                    pattern.Mask[index++] = false;
+                    pattern.p_mask[index++] = false;
                 }
                 else if (token.Contains("?"))
                 {
-                    pattern.Mask[index++] = false;
+                    pattern.p_mask[index++] = false;
                     if (!addModifierInitialised)
                     {
                         // index matters!
@@ -141,8 +141,8 @@ namespace FMemory
                 else
                 {
                     byte byteData = byte.Parse(token, NumberStyles.HexNumber);
-                    pattern.Bytes[index] = byteData;
-                    pattern.Mask[index] = true;
+                    pattern.p_bytes[index] = byteData;
+                    pattern.p_mask[index] = true;
                     index++;
                 }
                 addModifierIndex++;

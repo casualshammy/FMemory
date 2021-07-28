@@ -1,10 +1,11 @@
 ﻿using FMemory.Helpers;
-using FMemory.WinAPI;
+using Ax.Fw.Windows.WinAPI;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
+using Ax.Fw.Windows.WinAPI.Toolkit;
 
 namespace FMemory
 {
@@ -50,7 +51,7 @@ namespace FMemory
                                          ProcessAccessFlags.PROCESS_SET_INFORMATION | ProcessAccessFlags.PROCESS_TERMINATE |
                                          ProcessAccessFlags.PROCESS_VM_OPERATION | ProcessAccessFlags.PROCESS_VM_READ |
                                          ProcessAccessFlags.PROCESS_VM_WRITE | ProcessAccessFlags.SYNCHRONIZE;
-            ProcessHandle = Imports.OpenProcess(a, false, proc.Id);
+            ProcessHandle = NativeMethods.OpenProcess(a, false, proc.Id);
             ImageBase = Process.MainModule.BaseAddress;
         }
 
@@ -74,7 +75,7 @@ namespace FMemory
                     ThrowIfMemoryIsNotPhysicallyBacked(address, count);
                 byte[] buffer = new byte[count];
                 fixed (byte* buf = buffer)
-                    if (Imports.ReadProcessMemory(ProcessHandle, address, buf, count, out int numRead) && numRead == count)
+                    if (NativeMethods.ReadProcessMemory(ProcessHandle, address, buf, count, out int numRead) && numRead == count)
                         return buffer;
                 int lastError = Marshal.GetLastWin32Error();
                 throw new Win32Exception(lastError, $"Could not read bytes from 0x{address.ToString("X")}");
@@ -102,7 +103,7 @@ namespace FMemory
                         {
                             T o = default(T);
                             void* ptr = MarshalCache<T>.GetUnsafePtr(ref o);
-                            Imports.MoveMemory(ptr, (void*)address, MarshalCache<T>.Size);
+                            NativeMethods.MoveMemory(ptr, (void*)address, MarshalCache<T>.Size);
                             return o;
                         }
                         // All System.Object's require marshaling!
@@ -198,9 +199,9 @@ namespace FMemory
             }
 
             // Fix the protection flags to EXECUTE_READWRITE!
-            Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, Protection.PAGE_READWRITE, out uint oldProtect);
-            bool returnValue = Imports.WriteProcessMemory(ProcessHandle, address, buffer, MarshalCache<T>.Size, out int numWritten);
-            Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, oldProtect, out oldProtect);
+            NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, PageProtection.PAGE_READWRITE, out uint oldProtect);
+            bool returnValue = NativeMethods.WriteProcessMemory(ProcessHandle, address, buffer, MarshalCache<T>.Size, out int numWritten);
+            NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, oldProtect, out oldProtect);
 
             return returnValue;
         }
@@ -218,10 +219,10 @@ namespace FMemory
         /// </returns>
         public int WriteBytes(IntPtr address, byte[] bytes)
         {
-            if (Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, Protection.PAGE_READWRITE, out uint oldProtect))
+            if (NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, PageProtection.PAGE_READWRITE, out uint oldProtect))
             {
-                bool success = Imports.WriteProcessMemory(ProcessHandle, address, bytes, bytes.Length, out int numWritten);
-                Imports.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, oldProtect, out oldProtect);
+                bool success = NativeMethods.WriteProcessMemory(ProcessHandle, address, bytes, bytes.Length, out int numWritten);
+                NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, oldProtect, out oldProtect);
                 if (!success || numWritten != bytes.Length)
                 {
                     throw new AccessViolationException(string.Format("Could not write! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
@@ -246,7 +247,7 @@ namespace FMemory
         /// <returns>Returns NULL on failure, or the base address of the allocated memory on success.</returns>
         public IntPtr AllocateMemory(int size, MemoryAllocationType allocationType = MemoryAllocationType.MEM_COMMIT, MemoryProtectionType protectionType = MemoryProtectionType.PAGE_EXECUTE_READWRITE)
         {
-            return Imports.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, allocationType, protectionType);
+            return NativeMethods.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, allocationType, protectionType);
         }
 
         /// <summary>
@@ -284,7 +285,7 @@ namespace FMemory
             // for sure
             if (freeType == MemoryFreeType.MEM_RELEASE)
                 size = 0;
-            return Imports.VirtualFreeEx(ProcessHandle, address, size, freeType);
+            return NativeMethods.VirtualFreeEx(ProcessHandle, address, size, freeType);
         }
 
         public void Dispose()
@@ -335,7 +336,7 @@ namespace FMemory
                     VirtualAddress = new IntPtr(startPtr + i * pageSize)
                 };
             }
-            if (!Imports.QueryWorkingSetEx(ProcessHandle, wsInfo, numPages * sizeof(_PSAPI_WORKING_SET_EX_INFORMATION)))
+            if (!NativeMethods.QueryWorkingSetEx(ProcessHandle, wsInfo, numPages * sizeof(_PSAPI_WORKING_SET_EX_INFORMATION)))
                 throw new UnableToReadMemoryException(address, "You cannot read this address because QueryWorkingSetEx returned with error");
             foreach (_PSAPI_WORKING_SET_EX_INFORMATION info in wsInfo)
                 if (info.VirtualAttributes.Valid != 1)
