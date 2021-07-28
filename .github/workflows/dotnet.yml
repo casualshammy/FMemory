@@ -30,4 +30,4 @@ jobs:
       run: dotnet pack -c Release
     
     - name: Publish nuget
-      run: dotnet nuget push bin\Release\*.nupkg --api-key oy2fltrjq4cuxodgpfcapxezq37fa2penadpuancuvkxqi --source https://api.nuget.org/v3/index.json
+      run: dotnet nuget push bin\Release\*.nupkg --api-key ${{ secrets.NUGET_API_KEY }}  --source https://api.nuget.org/v3/index.json
