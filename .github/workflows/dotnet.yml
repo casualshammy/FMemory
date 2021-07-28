@@ -1,0 +1,33 @@
+name: .NET
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: 5.0.x
+        
+    - run: cd FMemory
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build -c Release
+      
+    - name: Pack
+      run: dotnet pack -c Release
+    
+    - name: Publish nuget
+      run: dotnet nuget push bin\Release\*.nupkg --api-key oy2fltrjq4cuxodgpfcapxezq37fa2penadpuancuvkxqi --source https://api.nuget.org/v3/index.json
