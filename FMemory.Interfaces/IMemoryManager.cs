@@ -8,6 +8,7 @@ namespace FMemory.Interfaces
     {
         bool AvoidNotPhysicallyBackedTrapPages { get; set; }
         Process Process { get; }
+        IntPtr ImageBase { get; }
 
         IntPtr AllocateMemory(int size, MemoryAllocationType allocationType = MemoryAllocationType.MEM_COMMIT, MemoryProtectionType protectionType = MemoryProtectionType.PAGE_EXECUTE_READWRITE);
         void Dispose();

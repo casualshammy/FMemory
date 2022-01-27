@@ -18,7 +18,7 @@ namespace FMemory
         /// <summary>
         ///     Gets or sets the process handle
         /// </summary>
-        public SafeMemoryHandle ProcessHandle;
+        public SafeMemoryHandle ProcessHandle { get; private set; }
 
         /// <summary>
         ///     Gets the process.
@@ -28,7 +28,7 @@ namespace FMemory
         /// <summary>
         ///     Gets the address of image base.
         /// </summary>
-        public readonly IntPtr ImageBase;
+        public IntPtr ImageBase { get; }
 
         /// <summary>
         ///     If set to true, every <see cref="ReadBytes"/> and <see cref="Read"/> will check if physical pages are backing allocation of memory
