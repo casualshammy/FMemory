@@ -2,15 +2,16 @@
 
   <PropertyGroup>
     <TargetFramework>net472</TargetFramework>
-    <PackageId>FMemory</PackageId>
+    <PackageId>$(AssemblyName)</PackageId>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <Description>Simple yet effective process memory interaction library for Windows.</Description>
-    <Version>1.0.0</Version>
+    <Version>$(VersionPrefix)</Version>
     <Authors>Axio</Authors>
-    <Company>Axio.Lab</Company>
+    <Company>$(Authors)</Company>
     <LangVersion>latest</LangVersion>
     <PackageProjectUrl>https://github.com/casualshammy/FMemory</PackageProjectUrl>
     <RepositoryUrl>https://github.com/casualshammy/FMemory</RepositoryUrl>
+    <Copyright>Axio</Copyright>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
