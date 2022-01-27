@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FMemory.Interfaces;
+using System;
 using System.IO;
 
 namespace FMemory.PatternHelpers
@@ -15,7 +16,7 @@ namespace FMemory.PatternHelpers
             Type = type;
         }
 
-        public IntPtr Apply(MemoryManager memory, IntPtr address)
+        public IntPtr Apply(IMemoryManager memory, IntPtr address)
         {
             switch (Type)
             {

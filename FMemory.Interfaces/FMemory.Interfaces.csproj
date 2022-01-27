@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net472</TargetFrameworks>
+    <Nullable>enable</Nullable>
+	  <LangVersion>latest</LangVersion>
+	  <Authors>Axio</Authors>
+	  <Description>.netstandard2.1-compatible set of interfaces for `FMemory` package</Description>
+	  <Copyright>Axio</Copyright>
+	  <PackageProjectUrl>https://github.com/casualshammy/FMemory</PackageProjectUrl>
+	  <RepositoryUrl>https://github.com/casualshammy/FMemory</RepositoryUrl>
+	  <PackageLicenseExpression>MIT</PackageLicenseExpression>
+	  <PackageRequireLicenseAcceptance>True</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+
+</Project>

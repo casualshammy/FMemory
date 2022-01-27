@@ -1,4 +1,5 @@
-﻿using System;
+﻿using FMemory.Interfaces;
+using System;
 
 namespace FMemory.PatternHelpers
 {
@@ -14,7 +15,7 @@ namespace FMemory.PatternHelpers
             Offset = val;
         }
 
-        public IntPtr Apply(MemoryManager bm, IntPtr addr)
+        public IntPtr Apply(IMemoryManager bm, IntPtr addr)
         {
             return addr + (int)Offset;
         }

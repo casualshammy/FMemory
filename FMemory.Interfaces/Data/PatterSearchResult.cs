@@ -1,11 +1,11 @@
 ﻿using System;
 
-namespace FMemory.PatternHelpers
+namespace FMemory.Interfaces.Data
 {
     /// <summary>
     ///     Contains result of successfully found pattern
     /// </summary>
-    public struct Result
+    public struct PatterSearchResult
     {
         /// <summary>
         ///     Address of POI

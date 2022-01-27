@@ -1,4 +1,5 @@
-﻿using FMemory;
+﻿using FMemory.Interfaces;
+using FMemory.Interfaces.Data;
 using FMemory.PatternHelpers;
 using System;
 using System.Collections.Generic;
@@ -12,7 +13,7 @@ namespace FMemory
     ///     Main class for finding memory address by pattern
     ///     Usage: get instance of <see cref="MemoryPattern"/> by calling <see cref="FromTextstyle"/>, then call <see cref="Find"/>
     /// </summary>
-    public class MemoryPattern
+    public class MemoryPattern : IMemoryPattern
     {
 
         /// <summary>
@@ -54,7 +55,7 @@ namespace FMemory
         /// </summary>
         /// <param name="bm">Instance of <see cref="MemoryManager"/> to use for search</param>
         /// <returns>Enumerable of <see cref="IntPtr"/> with found addresses</returns>
-        private IEnumerable<IntPtr> FindMaskAddress(MemoryManager bm)
+        private IEnumerable<IntPtr> FindMaskAddress(IMemoryManager bm)
         {
             System.Diagnostics.ProcessModule mainModule = bm.Process.MainModule;
             IntPtr mainModuleBaseAddress = mainModule.BaseAddress;
@@ -79,7 +80,7 @@ namespace FMemory
         /// </summary>
         /// <param name="bm">Instance of <see cref="MemoryManager"/> to use for search</param>
         /// <returns>Enumerable of <see cref="Result"/> with found addresses</returns>
-        public IEnumerable<Result> Find(MemoryManager bm)
+        public IEnumerable<PatterSearchResult> Find(IMemoryManager bm)
         {
             HashSet<IntPtr> foundAddresses = new HashSet<IntPtr>();
             foreach (IntPtr intPtr in FindMaskAddress(bm))
@@ -93,7 +94,7 @@ namespace FMemory
                 if (!foundAddresses.Contains(relativeAddress))
                 {
                     foundAddresses.Add(relativeAddress);
-                    yield return new Result { Address = relativeAddress, UnmodifiedAddress = new IntPtr(intPtr.ToInt64() - bm.Process.MainModule.BaseAddress.ToInt64()) };
+                    yield return new PatterSearchResult { Address = relativeAddress, UnmodifiedAddress = new IntPtr(intPtr.ToInt64() - bm.Process.MainModule.BaseAddress.ToInt64()) };
                 }
             }
         }

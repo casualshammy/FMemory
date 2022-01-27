@@ -27,7 +27,11 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ax.Fw.Windows" Version="1.0.2" />
+    <PackageReference Include="Ax.Fw.Windows" Version="4.0.10" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FMemory.Interfaces\FMemory.Interfaces.csproj" />
   </ItemGroup>
 
 </Project>

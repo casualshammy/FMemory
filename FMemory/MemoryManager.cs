@@ -6,13 +6,14 @@ using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using Ax.Fw.Windows.WinAPI.Toolkit;
+using FMemory.Interfaces;
 
 namespace FMemory
 {
     /// <summary>
     ///     Main class for memory interactions
     /// </summary>
-    public sealed unsafe class MemoryManager : IDisposable
+    public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
     {
         /// <summary>
         ///     Gets or sets the process handle
@@ -98,7 +99,7 @@ namespace FMemory
 
                         if (MarshalCache<T>.RealType == typeof(IntPtr))
                             return (T)(object)*(IntPtr*)address;
-                        
+
                         if (!MarshalCache<T>.TypeRequiresMarshal)
                         {
                             T o = default(T);
@@ -245,9 +246,12 @@ namespace FMemory
         ///     Type of memory protection
         /// </param>
         /// <returns>Returns NULL on failure, or the base address of the allocated memory on success.</returns>
-        public IntPtr AllocateMemory(int size, MemoryAllocationType allocationType = MemoryAllocationType.MEM_COMMIT, MemoryProtectionType protectionType = MemoryProtectionType.PAGE_EXECUTE_READWRITE)
+        public IntPtr AllocateMemory(
+            int size,
+            Interfaces.Data.MemoryAllocationType allocationType = Interfaces.Data.MemoryAllocationType.MEM_COMMIT,
+            Interfaces.Data.MemoryProtectionType protectionType = Interfaces.Data.MemoryProtectionType.PAGE_EXECUTE_READWRITE)
         {
-            return NativeMethods.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, allocationType, protectionType);
+            return NativeMethods.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, (MemoryAllocationType)allocationType, (MemoryProtectionType)protectionType);
         }
 
         /// <summary>
@@ -262,7 +266,7 @@ namespace FMemory
         public bool FreeMemory(IntPtr address)
         {
             // 0 for MEM_RELEASE
-            return FreeMemory(address, 0, MemoryFreeType.MEM_RELEASE);
+            return FreeMemory(address, 0, FMemory.Interfaces.Data.MemoryFreeType.MEM_RELEASE);
         }
 
         /// <summary>
@@ -280,12 +284,12 @@ namespace FMemory
         /// <returns>
         ///     Returns true on success, false overwise
         /// </returns>
-        public bool FreeMemory(IntPtr address, int size, MemoryFreeType freeType)
+        public bool FreeMemory(IntPtr address, int size, FMemory.Interfaces.Data.MemoryFreeType freeType)
         {
             // for sure
-            if (freeType == MemoryFreeType.MEM_RELEASE)
+            if (freeType == FMemory.Interfaces.Data.MemoryFreeType.MEM_RELEASE)
                 size = 0;
-            return NativeMethods.VirtualFreeEx(ProcessHandle, address, size, freeType);
+            return NativeMethods.VirtualFreeEx(ProcessHandle, address, size, (MemoryFreeType)freeType);
         }
 
         public void Dispose()

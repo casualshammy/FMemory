@@ -1,9 +1,10 @@
-﻿using System;
+﻿using FMemory.Interfaces;
+using System;
 
 namespace FMemory.PatternHelpers
 {
     public interface IModifier
     {
-        IntPtr Apply(MemoryManager bm, IntPtr address);
+        IntPtr Apply(IMemoryManager bm, IntPtr address);
     }
 }
