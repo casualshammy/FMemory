@@ -5,7 +5,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
-using Ax.Fw.Windows.WinAPI.Toolkit;
 using FMemory.Interfaces;
 
 namespace FMemory
@@ -18,7 +17,7 @@ namespace FMemory
         /// <summary>
         ///     Gets or sets the process handle
         /// </summary>
-        public SafeMemoryHandle ProcessHandle { get; private set; }
+        public IntPtr ProcessHandle { get; private set; }
 
         /// <summary>
         ///     Gets the process.
@@ -266,7 +265,7 @@ namespace FMemory
         public bool FreeMemory(IntPtr address)
         {
             // 0 for MEM_RELEASE
-            return FreeMemory(address, 0, FMemory.Interfaces.Data.MemoryFreeType.MEM_RELEASE);
+            return FreeMemory(address, 0, Interfaces.Data.MemoryFreeType.MEM_RELEASE);
         }
 
         /// <summary>
@@ -284,10 +283,10 @@ namespace FMemory
         /// <returns>
         ///     Returns true on success, false overwise
         /// </returns>
-        public bool FreeMemory(IntPtr address, int size, FMemory.Interfaces.Data.MemoryFreeType freeType)
+        public bool FreeMemory(IntPtr address, int size, Interfaces.Data.MemoryFreeType freeType)
         {
             // for sure
-            if (freeType == FMemory.Interfaces.Data.MemoryFreeType.MEM_RELEASE)
+            if (freeType == Interfaces.Data.MemoryFreeType.MEM_RELEASE)
                 size = 0;
             return NativeMethods.VirtualFreeEx(ProcessHandle, address, size, (MemoryFreeType)freeType);
         }
@@ -296,11 +295,6 @@ namespace FMemory
         {
             try
             {
-                if (ProcessHandle != null)
-                {
-                    ProcessHandle.Dispose();
-                    ProcessHandle = null;
-                }
                 try
                 {
                     Process.LeaveDebugMode();

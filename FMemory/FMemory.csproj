@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFramework>net472</TargetFramework>
+    <TargetFrameworks>net472;net5.0-windows7.0</TargetFrameworks>
     <PackageId>$(AssemblyName)</PackageId>
-    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageLicenseExpression>GPL-2.0-only</PackageLicenseExpression>
     <Description>Simple yet effective process memory interaction library for Windows.</Description>
     <Version>$(VersionPrefix)</Version>
     <Authors>Axio</Authors>
@@ -28,7 +28,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Ax.Fw.Windows" Version="4.0.10" />
+    <PackageReference Include="Ax.Fw.Windows" Version="5.0.9" />
   </ItemGroup>
 
   <ItemGroup>
