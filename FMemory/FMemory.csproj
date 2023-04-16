@@ -1,38 +1,32 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
-  <PropertyGroup>
-    <TargetFrameworks>net472;net5.0-windows7.0</TargetFrameworks>
-    <PackageId>$(AssemblyName)</PackageId>
-    <PackageLicenseExpression>GPL-2.0-only</PackageLicenseExpression>
-    <Description>Simple yet effective process memory interaction library for Windows.</Description>
-    <Version>$(VersionPrefix)</Version>
-    <Authors>Axio</Authors>
-    <Company>$(Authors)</Company>
-    <LangVersion>latest</LangVersion>
-    <PackageProjectUrl>https://github.com/casualshammy/FMemory</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/casualshammy/FMemory</RepositoryUrl>
-    <Copyright>Axio</Copyright>
-  </PropertyGroup>
+	<PropertyGroup>
+		<TargetFrameworks>net6.0-windows7.0</TargetFrameworks>
+		<PackageId>$(AssemblyName)</PackageId>
+		<PackageLicenseExpression>GPL-2.0-only</PackageLicenseExpression>
+		<Description>Simple yet effective process memory interaction library for Windows.</Description>
+		<Version>$(VersionPrefix)</Version>
+		<Authors>Axio</Authors>
+		<Company>$(Authors)</Company>
+		<LangVersion>latest</LangVersion>
+		<PackageProjectUrl>https://github.com/casualshammy/FMemory</PackageProjectUrl>
+		<RepositoryUrl>https://github.com/casualshammy/FMemory</RepositoryUrl>
+		<Copyright>Axio</Copyright>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+	<ItemGroup>
+		<Folder Include="ManagerHelpers\" />
+		<Folder Include="PatternHelpers\" />
+	</ItemGroup>
 
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|AnyCPU'">
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+	<ItemGroup>
+		<PackageReference Include="Ax.Fw.Windows" Version="12.0.10" />
+		<PackageReference Include="System.Reactive" Version="5.0.0" />
+	</ItemGroup>
 
-  <ItemGroup>
-    <Folder Include="ManagerHelpers\" />
-    <Folder Include="PatternHelpers\" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="Ax.Fw.Windows" Version="5.0.9" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\FMemory.Interfaces\FMemory.Interfaces.csproj" />
-  </ItemGroup>
+	<ItemGroup>
+		<ProjectReference Include="..\FMemory.Interfaces\FMemory.Interfaces.csproj" />
+	</ItemGroup>
 
 </Project>
