@@ -161,7 +161,7 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
         new Win32Exception(Marshal.GetLastWin32Error()).Message));
 
     var success = NativeMethods.WriteProcessMemory(ProcessHandle, _address, buffer, size, out int numWritten);
-    NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)size, oldProtect, out oldProtect);
+    NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)size, oldProtect, out _);
 
     if (!success || numWritten != size)
       throw new AccessViolationException($"Could not write! Value of '{typeof(T).Name}' to '0x{_address:X8}' ({new Win32Exception(Marshal.GetLastWin32Error()).Message})");
@@ -180,18 +180,17 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   /// </returns>
   public void WriteBytes(IntPtr _address, byte[] _bytes)
   {
-    if (NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)_bytes.Length, PageProtection.PAGE_READWRITE, out uint oldProtect))
-    {
-      bool success = NativeMethods.WriteProcessMemory(ProcessHandle, _address, _bytes, _bytes.Length, out int numWritten);
-      NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)_bytes.Length, oldProtect, out oldProtect);
-      if (!success || numWritten != _bytes.Length)
-        throw new AccessViolationException($"Could not write! '{_bytes.Length}' bytes to '0x{_address:X8}' ({new Win32Exception(Marshal.GetLastWin32Error()).Message})");
-    }
-    throw new AccessViolationException(string.Format(
+    if (!NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)_bytes.Length, PageProtection.PAGE_READWRITE, out uint oldProtect))
+      throw new AccessViolationException(string.Format(
         "Could not write! VirtualProtectEx is failed! {0} bytes to {1} [{2}]",
         _bytes.Length,
         _address.ToString("X8"),
         new Win32Exception(Marshal.GetLastWin32Error()).Message));
+
+    var success = NativeMethods.WriteProcessMemory(ProcessHandle, _address, _bytes, _bytes.Length, out int numWritten);
+    NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)_bytes.Length, oldProtect, out _);
+    if (!success || numWritten != _bytes.Length)
+      throw new AccessViolationException($"Could not write! '{_bytes.Length}' bytes to '0x{_address:X8}' ({new Win32Exception(Marshal.GetLastWin32Error()).Message})");
   }
 
   /// <summary>
