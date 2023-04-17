@@ -1,4 +1,4 @@
-﻿using FMemory.Interfaces;
+﻿using FMemory.Common.Interfaces;
 using System;
 using System.IO;
 
@@ -7,7 +7,7 @@ namespace FMemory.PatternHelpers
     /// <summary>
     ///     Modifies resulting address of pattern depending on cpu instruction
     /// </summary>
-    public class LeaModifier : IModifier
+    public class LeaModifier : IPatternModifier
     {
         public LeaType Type { get; private set; }
 

@@ -13,6 +13,8 @@
 		<RepositoryUrl>https://github.com/casualshammy/FMemory</RepositoryUrl>
 		<Copyright>Axio</Copyright>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<PackageTags>windows;memory;native;p/invoke</PackageTags>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -26,7 +28,7 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<ProjectReference Include="..\FMemory.Interfaces\FMemory.Interfaces.csproj" />
+		<ProjectReference Include="..\FMemory.Interfaces\FMemory.Common.csproj" />
 	</ItemGroup>
 
 </Project>

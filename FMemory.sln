@@ -5,9 +5,9 @@ VisualStudioVersion = 17.0.32112.339
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FMemory", "FMemory\FMemory.csproj", "{2BBA1502-A4D3-4BD2-BFFC-9ABC2D89EA66}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FMemory.Interfaces", "FMemory.Interfaces\FMemory.Interfaces.csproj", "{602230FB-84A1-4BF6-8AF0-2211B6916607}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FMemory.Common", "FMemory.Interfaces\FMemory.Common.csproj", "{602230FB-84A1-4BF6-8AF0-2211B6916607}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FMemory.Tests", "FMemory.Tests\FMemory.Tests.csproj", "{39636F58-1C74-443C-BF27-FC6222D26935}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FMemory.Tests", "FMemory.Tests\FMemory.Tests.csproj", "{39636F58-1C74-443C-BF27-FC6222D26935}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

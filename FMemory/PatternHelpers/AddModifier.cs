@@ -1,4 +1,4 @@
-﻿using FMemory.Interfaces;
+﻿using FMemory.Common.Interfaces;
 using System;
 
 namespace FMemory.PatternHelpers
@@ -6,7 +6,7 @@ namespace FMemory.PatternHelpers
     /// <summary>
     ///     This modifier just adds index of first "??" statement in pattern
     /// </summary>
-    internal class AddModifier : IModifier
+    internal class AddModifier : IPatternModifier
     {
         public uint Offset { get; private set; }
 

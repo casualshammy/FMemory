@@ -1,14 +1,13 @@
 ﻿#nullable enable
 using Ax.Fw.Windows.WinAPI;
+using FMemory.Common.Data;
+using FMemory.Common.Interfaces;
 using FMemory.Helpers;
-using FMemory.Interfaces;
 using FMemory.Toolkit;
 using System;
-using System.Buffers;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Reactive.Disposables;
-using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
 using System.Text;
 
@@ -20,14 +19,40 @@ namespace FMemory;
 public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
 {
   /// <summary>
-  ///     Gets or sets the process handle
+  ///     Initializes a new instance of the <see cref="MemoryManager" /> class.
   /// </summary>
-  public IntPtr ProcessHandle { get; private set; }
+  /// <param name="_process">The process</param>
+  public MemoryManager(Process _process)
+  {
+    if (_process.HasExited)
+      throw new AccessViolationException($"Process: {_process.Id} has already exited. Can not attach to it.");
+
+    if (_process.MainModule == null)
+      throw new InvalidOperationException($"Process: {_process.Id} has not main module.");
+
+    Process.EnterDebugMode();
+    Process = _process;
+    var openFlags = ProcessAccessFlags.PROCESS_CREATE_THREAD |
+                    ProcessAccessFlags.PROCESS_QUERY_INFORMATION |
+                    ProcessAccessFlags.PROCESS_SET_INFORMATION | 
+                    ProcessAccessFlags.PROCESS_TERMINATE |
+                    ProcessAccessFlags.PROCESS_VM_OPERATION | 
+                    ProcessAccessFlags.PROCESS_VM_READ |
+                    ProcessAccessFlags.PROCESS_VM_WRITE | 
+                    ProcessAccessFlags.SYNCHRONIZE;
+    ProcessHandle = NativeMethods.OpenProcess(openFlags, false, _process.Id);
+    ImageBase = Process.MainModule.BaseAddress;
+  }
+
+  /// <summary>
+  ///     Gets the process handle
+  /// </summary>
+  public IntPtr ProcessHandle { get; }
 
   /// <summary>
   ///     Gets the process.
   /// </summary>
-  public Process Process { get; private set; }
+  public Process Process { get; }
 
   /// <summary>
   ///     Gets the address of image base.
@@ -40,52 +65,30 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   public bool AvoidNotPhysicallyBackedTrapPages { get; set; }
 
   /// <summary>
-  ///     Initializes a new instance of the <see cref="MemoryManager" /> class.
-  /// </summary>
-  /// <param name="proc">The process</param>
-  public MemoryManager(Process proc)
-  {
-    if (proc.HasExited)
-    {
-      throw new AccessViolationException("Process: " + proc.Id + " has already exited. Can not attach to it.");
-    }
-    Process.EnterDebugMode();
-    Process = proc;
-    const ProcessAccessFlags a = ProcessAccessFlags.PROCESS_CREATE_THREAD |
-                                 ProcessAccessFlags.PROCESS_QUERY_INFORMATION |
-                                 ProcessAccessFlags.PROCESS_SET_INFORMATION | ProcessAccessFlags.PROCESS_TERMINATE |
-                                 ProcessAccessFlags.PROCESS_VM_OPERATION | ProcessAccessFlags.PROCESS_VM_READ |
-                                 ProcessAccessFlags.PROCESS_VM_WRITE | ProcessAccessFlags.SYNCHRONIZE;
-    ProcessHandle = NativeMethods.OpenProcess(a, false, proc.Id);
-    ImageBase = Process.MainModule.BaseAddress;
-  }
-
-  /// <summary>
   ///     Reads a specific number of bytes from memory
   /// </summary>
-  /// <param name="address">The address in memory</param>
-  /// <param name="count">The count of bytes to read</param>
-  /// <returns>If method success, returns array of bytes. If not, returns empty array with zero size</returns>
-  public byte[] ReadBytes(IntPtr address, int count)
+  /// <param name="_address">The address in memory</param>
+  /// <param name="_count">The count of bytes to read</param>
+  public byte[] ReadBytes(IntPtr _address, int _count)
   {
-    if (count != 0)
+    if (_count != 0)
     {
       // Yes, this address is valid, but... Well, if you really want it, just delete next instruction
-      if (address == IntPtr.Zero)
+      if (_address == IntPtr.Zero)
       {
-        StackTrace stackTrace = new StackTrace(1, true);
-        throw new DetailedArgumentException("Address cannot be zero.", nameof(address), stackTrace.ToString());
+        var stackTrace = new StackTrace(1, true);
+        throw new DetailedArgumentException("Address cannot be zero.", nameof(_address), stackTrace.ToString());
       }
       if (AvoidNotPhysicallyBackedTrapPages)
-        ThrowIfMemoryIsNotPhysicallyBacked(address, count);
+        ThrowIfMemoryIsNotPhysicallyBacked(_address, _count);
 
-      var buffer = new byte[count]; // ArrayPool<byte> is NOT effective here (tested)
+      var buffer = new byte[_count]; // ArrayPool<byte> is NOT effective here (tested)
       fixed (byte* buf = buffer)
-        if (NativeMethods.ReadProcessMemory(ProcessHandle, address, buf, count, out int numRead) && numRead == count)
+        if (NativeMethods.ReadProcessMemory(ProcessHandle, _address, buf, _count, out int numRead) && numRead == _count)
           return buffer;
 
       var lastError = Marshal.GetLastWin32Error();
-      throw new Win32Exception(lastError, $"Could not read bytes from 0x{address.ToString("X")}");
+      throw new Win32Exception(lastError, $"Could not read bytes from 0x{_address.ToString("X")}");
     }
     return Array.Empty<byte>();
   }
@@ -93,13 +96,13 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   /// <summary>
   ///     Reads a value from the address in memory
   /// </summary>
-  /// <param name="address">
+  /// <param name="_address">
   ///     The address to read
   /// </param>
-  public T Read<T>(IntPtr address) where T : struct
+  public T Read<T>(IntPtr _address) where T : struct
   {
-    fixed (byte* b = ReadBytes(address, MarshalCache<T>.Size))
-      return InternalRead<T>((IntPtr)b);
+    fixed (byte* buffer = ReadBytes(_address, MarshalCache<T>.Size))
+      return InternalRead<T>((IntPtr)buffer);
   }
 
   /// <summary>
@@ -123,22 +126,22 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   /// <summary>
   ///     Writes a value to the address in memory
   /// </summary>
-  /// <param name="address">
+  /// <param name="_address">
   ///     The address in memory
   /// </param>
-  /// <param name="value">
+  /// <param name="_value">
   ///     The value to write
   /// </param>
   /// <returns>
   ///     True if it succeeds, false overwise
   /// </returns>
-  public bool Write<T>(IntPtr address, T value) where T : notnull
+  public void Write<T>(IntPtr _address, T _value) where T : notnull
   {
     byte[] buffer;
-    IntPtr allocation = Marshal.AllocHGlobal(MarshalCache<T>.Size);
+    var allocation = Marshal.AllocHGlobal(MarshalCache<T>.Size);
     try
     {
-      Marshal.StructureToPtr(value, allocation, false);
+      Marshal.StructureToPtr(_value, allocation, false);
       buffer = new byte[MarshalCache<T>.Size];
       Marshal.Copy(allocation, buffer, 0, MarshalCache<T>.Size);
     }
@@ -147,73 +150,83 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
       Marshal.FreeHGlobal(allocation);
     }
 
-    // Fix the protection flags to EXECUTE_READWRITE!
-    NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, PageProtection.PAGE_READWRITE, out uint oldProtect);
-    bool returnValue = NativeMethods.WriteProcessMemory(ProcessHandle, address, buffer, MarshalCache<T>.Size, out int numWritten);
-    NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)MarshalCache<T>.Size, oldProtect, out oldProtect);
+    var size = MarshalCache<T>.Size;
 
-    return returnValue;
+    // Fix the protection flags to EXECUTE_READWRITE!
+    if (!NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)size, PageProtection.PAGE_READWRITE, out uint oldProtect))
+      throw new AccessViolationException(string.Format(
+        "Could not write! VirtualProtectEx is failed! {0} bytes to {1} [{2}]",
+        buffer.Length, 
+        _address.ToString("X8"), 
+        new Win32Exception(Marshal.GetLastWin32Error()).Message));
+
+    var success = NativeMethods.WriteProcessMemory(ProcessHandle, _address, buffer, size, out int numWritten);
+    NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)size, oldProtect, out oldProtect);
+
+    if (!success || numWritten != size)
+      throw new AccessViolationException($"Could not write! Value of '{typeof(T).Name}' to '0x{_address:X8}' ({new Win32Exception(Marshal.GetLastWin32Error()).Message})");
   }
 
   /// <summary>
   ///     Writes an array of bytes to memory.
   /// </summary>
-  /// <param name="address">
+  /// <param name="_address">
   ///     The address to write to</param>
-  /// <param name="bytes">
+  /// <param name="_bytes">
   ///     The byte array to write
   /// </param>
   /// <returns>
   ///     Number of bytes written.
   /// </returns>
-  public int WriteBytes(IntPtr address, byte[] bytes)
+  public void WriteBytes(IntPtr _address, byte[] _bytes)
   {
-    if (NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, PageProtection.PAGE_READWRITE, out uint oldProtect))
+    if (NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)_bytes.Length, PageProtection.PAGE_READWRITE, out uint oldProtect))
     {
-      bool success = NativeMethods.WriteProcessMemory(ProcessHandle, address, bytes, bytes.Length, out int numWritten);
-      NativeMethods.VirtualProtectEx(ProcessHandle, address, (IntPtr)bytes.Length, oldProtect, out oldProtect);
-      if (!success || numWritten != bytes.Length)
-      {
-        throw new AccessViolationException(string.Format("Could not write! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
-      }
-      return numWritten;
+      bool success = NativeMethods.WriteProcessMemory(ProcessHandle, _address, _bytes, _bytes.Length, out int numWritten);
+      NativeMethods.VirtualProtectEx(ProcessHandle, _address, (IntPtr)_bytes.Length, oldProtect, out oldProtect);
+      if (!success || numWritten != _bytes.Length)
+        throw new AccessViolationException($"Could not write! '{_bytes.Length}' bytes to '0x{_address:X8}' ({new Win32Exception(Marshal.GetLastWin32Error()).Message})");
     }
-    throw new AccessViolationException(string.Format("Could not write! VirtualProtectEx is failed! {0} to {1} [{2}]", bytes.Length, address.ToString("X8"), new Win32Exception(Marshal.GetLastWin32Error()).Message));
+    throw new AccessViolationException(string.Format(
+        "Could not write! VirtualProtectEx is failed! {0} bytes to {1} [{2}]",
+        _bytes.Length,
+        _address.ToString("X8"),
+        new Win32Exception(Marshal.GetLastWin32Error()).Message));
   }
 
   /// <summary>
   ///     Allocates memory inside the process.
   /// </summary>
-  /// <param name="size">
+  /// <param name="_size">
   ///     Number of bytes to allocate
   /// </param>
-  /// <param name="allocationType">
+  /// <param name="_allocationType">
   ///     Type of memory allocation
   /// </param>
-  /// <param name="protectionType">
+  /// <param name="_protectionType">
   ///     Type of memory protection
   /// </param>
   /// <returns>Returns NULL on failure, or the base address of the allocated memory on success.</returns>
   public IntPtr AllocateMemory(
-      int size,
-      Interfaces.Data.MemoryAllocationType allocationType = Interfaces.Data.MemoryAllocationType.MEM_COMMIT,
-      Interfaces.Data.MemoryProtectionType protectionType = Interfaces.Data.MemoryProtectionType.PAGE_EXECUTE_READWRITE)
+      int _size,
+      Common.Data.MemoryAllocationType _allocationType = Common.Data.MemoryAllocationType.MEM_COMMIT,
+      Common.Data.MemoryProtectionType _protectionType = Common.Data.MemoryProtectionType.PAGE_EXECUTE_READWRITE)
   {
-    return NativeMethods.VirtualAllocEx(ProcessHandle, IntPtr.Zero, size, (MemoryAllocationType)allocationType, (MemoryProtectionType)protectionType);
+    return NativeMethods.VirtualAllocEx(
+      ProcessHandle, 
+      IntPtr.Zero, 
+      _size, 
+      (Ax.Fw.Windows.WinAPI.MemoryAllocationType)_allocationType, 
+      (Ax.Fw.Windows.WinAPI.MemoryProtectionType)_protectionType);
   }
 
   public IDisposable AllocateMemory(
       int _size,
       out IntPtr _allocatedMemoryAddress,
-      Interfaces.Data.MemoryAllocationType _allocationType = Interfaces.Data.MemoryAllocationType.MEM_COMMIT,
-      Interfaces.Data.MemoryProtectionType _protectionType = Interfaces.Data.MemoryProtectionType.PAGE_EXECUTE_READWRITE)
+      Common.Data.MemoryAllocationType _allocationType = Common.Data.MemoryAllocationType.MEM_COMMIT,
+      Common.Data.MemoryProtectionType _protectionType = Common.Data.MemoryProtectionType.PAGE_EXECUTE_READWRITE)
   {
-    var allocation = NativeMethods.VirtualAllocEx(
-      ProcessHandle,
-      IntPtr.Zero,
-      _size,
-      (MemoryAllocationType)_allocationType,
-      (MemoryProtectionType)_protectionType);
+    var allocation = AllocateMemory(_size, _allocationType, _protectionType);
 
     _allocatedMemoryAddress = allocation;
 
@@ -223,66 +236,64 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   /// <summary>
   ///     Frees an allocated block of memory in the process.
   /// </summary>
-  /// <param name="address">
+  /// <param name="_address">
   ///     Address of the block of memory
   /// </param>
   /// <returns>
   ///     Returns true on success, false overwise
   /// </returns>
-  public bool FreeMemory(IntPtr address)
+  public bool FreeMemory(IntPtr _address)
   {
     // 0 for MEM_RELEASE
-    return FreeMemory(address, 0, Interfaces.Data.MemoryFreeType.MEM_RELEASE);
+    return FreeMemory(_address, 0, Common.Data.MemoryFreeType.MEM_RELEASE);
   }
 
   /// <summary>
   ///     Frees an allocated block of memory in the process.
   /// </summary>
-  /// <param name="address">
+  /// <param name="_address">
   ///     Address of the block of memory
   /// </param>
-  /// <param name="size">
+  /// <param name="_size">
   ///     Number of bytes to be freed. This must be 0 if using MEM_RELEASE
   /// </param>
-  /// <param name="freeType">
+  /// <param name="_freeType">
   ///     Type of free operation
   /// </param>
   /// <returns>
   ///     Returns true on success, false overwise
   /// </returns>
-  public bool FreeMemory(IntPtr address, int size, Interfaces.Data.MemoryFreeType freeType)
+  public bool FreeMemory(IntPtr _address, int _size, Common.Data.MemoryFreeType _freeType)
   {
-    // for sure
-    if (freeType == Interfaces.Data.MemoryFreeType.MEM_RELEASE)
-      size = 0;
-    return NativeMethods.VirtualFreeEx(ProcessHandle, address, size, (MemoryFreeType)freeType);
+    if (_freeType == Common.Data.MemoryFreeType.MEM_RELEASE)
+      _size = 0;
+
+    return NativeMethods.VirtualFreeEx(
+      ProcessHandle,      _address, 
+      _size, 
+      (Ax.Fw.Windows.WinAPI.MemoryFreeType)_freeType);
   }
 
   public void Dispose()
   {
     try
     {
-      try
-      {
-        Process.LeaveDebugMode();
-      }
-      catch (Exception ex)
-      {
-        Trace.WriteLine(ex.ToString());
-      }
+      NativeMethods.CloseHandle(ProcessHandle);
     }
     catch (Exception ex)
     {
-      Trace.WriteLine(ex);
+      Trace.WriteLine(ex.ToString());
+#if DEBUG
+      throw;
+#endif
     }
   }
 
-  [HandleProcessCorruptedStateExceptions]
-  private T InternalRead<T>(IntPtr address) where T : struct
+  private T InternalRead<T>(IntPtr _address) where T : struct
   {
     try
     {
-      if (address == IntPtr.Zero)
+      if (_address == IntPtr.Zero)
         throw new InvalidOperationException("Cannot retrieve a value at address 0");
 
       object returnValue;
@@ -291,56 +302,60 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
         case TypeCode.Object:
 
           if (MarshalCache<T>.RealType == typeof(IntPtr))
-            return (T)(object)*(IntPtr*)address;
+            return (T)(object)*(IntPtr*)_address;
 
           if (!MarshalCache<T>.TypeRequiresMarshal)
           {
-            T o = default;
-            void* ptr = MarshalCache<T>.GetUnsafePtr(ref o);
-            NativeMethods.MoveMemory(ptr, (void*)address, MarshalCache<T>.Size);
-            return o;
+            T obj = default;
+            void* ptr = MarshalCache<T>.GetUnsafePtr(ref obj);
+            NativeMethods.MoveMemory(ptr, (void*)_address, MarshalCache<T>.Size);
+            return obj;
           }
           // All System.Object's require marshaling!
-          returnValue = Marshal.PtrToStructure(address, typeof(T));
+          var value = Marshal.PtrToStructure(_address, typeof(T));
+          if (value == null)
+            throw new InvalidCastException($"Can't read type '{typeof(T).Name}' from the address '0x{_address:X8}'");
+
+          returnValue = value;
           break;
         case TypeCode.SByte:
-          returnValue = *(sbyte*)address;
+          returnValue = *(sbyte*)_address;
           break;
         case TypeCode.Byte:
-          returnValue = *(byte*)address;
+          returnValue = *(byte*)_address;
           break;
         case TypeCode.Int16:
-          returnValue = *(short*)address;
+          returnValue = *(short*)_address;
           break;
         case TypeCode.UInt16:
-          returnValue = *(ushort*)address;
+          returnValue = *(ushort*)_address;
           break;
         case TypeCode.Int32:
-          returnValue = *(int*)address;
+          returnValue = *(int*)_address;
           break;
         case TypeCode.UInt32:
-          returnValue = *(uint*)address;
+          returnValue = *(uint*)_address;
           break;
         case TypeCode.Int64:
-          returnValue = *(long*)address;
+          returnValue = *(long*)_address;
           break;
         case TypeCode.UInt64:
-          returnValue = *(ulong*)address;
+          returnValue = *(ulong*)_address;
           break;
         case TypeCode.Single:
-          returnValue = *(float*)address;
+          returnValue = *(float*)_address;
           break;
         case TypeCode.Double:
-          returnValue = *(double*)address;
+          returnValue = *(double*)_address;
           break;
         case TypeCode.Decimal:
-          returnValue = *(decimal*)address;
+          returnValue = *(decimal*)_address;
           break;
         case TypeCode.Boolean:
-          returnValue = *(byte*)address != 0;
+          returnValue = *(byte*)_address != 0;
           break;
         case TypeCode.Char:
-          returnValue = *(char*)address;
+          returnValue = *(char*)_address;
           break;
         default:
           throw new ArgumentOutOfRangeException();
@@ -349,7 +364,7 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
     }
     catch (AccessViolationException)
     {
-      return default(T);
+      return default;
     }
   }
 
@@ -357,19 +372,19 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   ///     Checks if memory is really physically backed
   ///     It is needed if target process uses some kind of trap pages
   /// </summary>
-  /// <param name="address">
+  /// <param name="_address">
   ///     Address of the block of memory to check
   /// </param>
-  /// <param name="count">
+  /// <param name="_count">
   ///     Size of block of memory
   /// </param>
-  private void ThrowIfMemoryIsNotPhysicallyBacked(IntPtr address, int count)
+  private void ThrowIfMemoryIsNotPhysicallyBacked(IntPtr _address, int _count)
   {
     uint pageSize = (uint)Environment.SystemPageSize;
-    int startPage = (int)Math.Floor((double)address.ToInt64() / pageSize);
-    int numPages = (int)Math.Ceiling((float)count / pageSize);
+    int startPage = (int)Math.Floor((double)_address.ToInt64() / pageSize);
+    int numPages = (int)Math.Ceiling((float)_count / pageSize);
     long startPtr = pageSize * startPage;
-    _PSAPI_WORKING_SET_EX_INFORMATION[] wsInfo = new _PSAPI_WORKING_SET_EX_INFORMATION[numPages];
+    var wsInfo = new _PSAPI_WORKING_SET_EX_INFORMATION[numPages];
     for (uint i = 0; i < numPages; i++)
     {
       wsInfo[i] = new _PSAPI_WORKING_SET_EX_INFORMATION
@@ -378,10 +393,11 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
       };
     }
     if (!NativeMethods.QueryWorkingSetEx(ProcessHandle, wsInfo, numPages * sizeof(_PSAPI_WORKING_SET_EX_INFORMATION)))
-      throw new UnableToReadMemoryException(address, "You cannot read this address because QueryWorkingSetEx returned with error");
-    foreach (_PSAPI_WORKING_SET_EX_INFORMATION info in wsInfo)
+      throw new UnableToReadMemoryException(_address, "You cannot read this address because QueryWorkingSetEx returned with error");
+
+    foreach (var info in wsInfo)
       if (info.VirtualAttributes.Valid != 1)
-        throw new UnableToReadMemoryException(address, "You cannot read this address because related memory page is not backed by physical memory");
+        throw new UnableToReadMemoryException(_address, "You cannot read this address because related memory page is not backed by physical memory");
   }
 
 }
