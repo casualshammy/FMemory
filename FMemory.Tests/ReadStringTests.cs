@@ -9,7 +9,7 @@ public class ReadStringTests
   public void ReadStringTestDefaultEncoding()
   {
     using var process = Process.GetCurrentProcess();
-    using var mm = new MemoryManager(process);
+    using var mm = new MemoryManager(process.Id);
 
     var str = "„P„‚„y„r„u„„, „„‚„y„r„u„„! x654";
     var strBytes = Encoding.UTF8.GetBytes(str);
@@ -25,7 +25,7 @@ public class ReadStringTests
   public void ReadStringTestASCII()
   {
     using var process = Process.GetCurrentProcess();
-    using var mm = new MemoryManager(process);
+    using var mm = new MemoryManager(process.Id);
 
     var str = "x654 hi hi!";
     var strBytes = Encoding.ASCII.GetBytes(str);
@@ -41,7 +41,7 @@ public class ReadStringTests
   public void ReadStringTestUnsufficientSize()
   {
     using var process = Process.GetCurrentProcess();
-    using var mm = new MemoryManager(process);
+    using var mm = new MemoryManager(process.Id);
 
     var str = "„P„‚„y„r„u„„, „„‚„y„r„u„„! x654";
     var strBytes = Encoding.UTF8.GetBytes(str);
