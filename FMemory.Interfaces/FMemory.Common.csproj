@@ -15,4 +15,8 @@
 		<PackageTags>windows;memory;native;p/invoke</PackageTags>
 	</PropertyGroup>
 
+	<ItemGroup>
+		<None Include="README.md" Pack="true" PackagePath="\" />
+	</ItemGroup>
+
 </Project>
