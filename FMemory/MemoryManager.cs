@@ -22,16 +22,18 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
   ///     Initializes a new instance of the <see cref="MemoryManager" /> class.
   /// </summary>
   /// <param name="_process">The process</param>
-  public MemoryManager(Process _process)
+  public MemoryManager(int _processId)
   {
-    if (_process.HasExited)
-      throw new AccessViolationException($"Process: {_process.Id} has already exited. Can not attach to it.");
+    var process = Process.GetProcessById(_processId);
 
-    if (_process.MainModule == null)
-      throw new InvalidOperationException($"Process: {_process.Id} has not main module.");
+    if (process.HasExited)
+      throw new AccessViolationException($"Process: {process.Id} has already exited. Can not attach to it.");
+
+    if (process.MainModule == null)
+      throw new InvalidOperationException($"Process: {process.Id} has not main module.");
 
     Process.EnterDebugMode();
-    Process = _process;
+    
     var openFlags = ProcessAccessFlags.PROCESS_CREATE_THREAD |
                     ProcessAccessFlags.PROCESS_QUERY_INFORMATION |
                     ProcessAccessFlags.PROCESS_SET_INFORMATION | 
@@ -40,8 +42,10 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
                     ProcessAccessFlags.PROCESS_VM_READ |
                     ProcessAccessFlags.PROCESS_VM_WRITE | 
                     ProcessAccessFlags.SYNCHRONIZE;
-    ProcessHandle = NativeMethods.OpenProcess(openFlags, false, _process.Id);
-    ImageBase = Process.MainModule.BaseAddress;
+
+    ProcessHandle = NativeMethods.OpenProcess(openFlags, false, process.Id);
+    ImageBase = process.MainModule.BaseAddress;
+    Process = process;
   }
 
   /// <summary>
@@ -278,6 +282,7 @@ public sealed unsafe class MemoryManager : IDisposable, IMemoryManager
     try
     {
       NativeMethods.CloseHandle(ProcessHandle);
+      Process?.Dispose();
     }
     catch (Exception ex)
     {
